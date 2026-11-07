@@ -1,0 +1,22 @@
+[
+  {
+    "path": "ArtSource/Blender/Arena/BabyFoot_Arena_LowPoly.blend",
+    "bytes": 285452,
+    "sha256": "205652b8af45d0b56d3a48d99c02b28f76d0160e7d9bd96bd135818fcd8189e6"
+  },
+  {
+    "path": "ArtSource/Blender/Players/BabyFoot_Player_LowPoly.blend",
+    "bytes": 327339,
+    "sha256": "b9d045795f0d7f3459406083300c28831ea97877a621474e58b06dabfa4a2eb6"
+  },
+  {
+    "path": "ArtSource/Blender/Handles/BabyFoot_Handle_LowPoly.blend",
+    "bytes": 247931,
+    "sha256": "320166405d4045e0ded3b48253a78391161d91284906d76b9db30164b1267f18"
+  },
+  {
+    "path": "ArtSource/Blender/Table/BabyFoot_Table_LowPoly.blend",
+    "bytes": 957883,
+    "sha256": "bf15d4339282dce20367ca460f5ace76d340e0a9c5b1ce4e6e6e4f076dbf4334"
+  }
+]
