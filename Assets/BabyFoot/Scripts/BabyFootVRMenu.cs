@@ -75,10 +75,11 @@ public class BabyFootVRMenu : MonoBehaviour
         BabyFootUITheme.Exercise(exercises.transform,"Reaction Defense","Short shots. Quick saves.","01",0,()=>SelectExercise(0));
         BabyFootUITheme.Exercise(exercises.transform,"Trajectory Anticipation","Read the rebounds. Protect the goal.","02",1,()=>SelectExercise(1));
         BabyFootUITheme.Exercise(exercises.transform,"Find the Gap / Attack","Find your opening. Make the shot.","03",2,()=>SelectExercise(2));
-        BabyFootUITheme.Exercise(exercises.transform,"Free Match vs AI","Your blue team. A full match against the AI.","04",3,()=>UnityEngine.SceneManagement.SceneManager.LoadScene("Assets/BabyFoot/Scenes/BabyFoot_FreeMatch.unity"),true);
+        BabyFootUITheme.Exercise(exercises.transform,"Free Match vs AI","Your blue team. A full match against the AI.","04",3,()=>UnityEngine.SceneManagement.SceneManager.LoadScene("Assets/BabyFoot/Scenes/BabyFoot_FreeMatch_Pavillon.unity"),true);
         controls=Group("2 - Learn the controls",root.transform);
         instruction=Label(controls.transform,"",26,175);
         controlState=Label(controls.transform,"",25,80);
+        defenseToggle=Button(controls.transform,"",()=>{control.Release();session.exercise.SetDefenseLine(!session.exercise.twoRodDefense);RefreshView();},46);
         Button(controls.transform,"Try controls - no timer or recording",BeginFreeControls,65);
         resetDemo=Button(controls.transform,"Reset ball / centre bar",ResetDemo);
         Button(controls.transform,"Continue to session setup",OpenSettings,65);
@@ -137,6 +138,7 @@ public class BabyFootVRMenu : MonoBehaviour
         }
         control.RefreshTarget();PositionPanels();
     }
+    UnityEngine.UI.Button defenseToggle;
     void StopFreeControls()
     {
         control.Release();control.FreeControl=false;
@@ -184,8 +186,11 @@ public class BabyFootVRMenu : MonoBehaviour
         running.SetActive(stage=="Practice"||stage=="Measurement");between.SetActive(stage=="Break");summary.SetActive(stage=="Summary");
         menuCanvas.gameObject.SetActive(testing||!active||showDuringTrial);statusCanvas.gameObject.SetActive(!menuCanvas.gameObject.activeSelf);
         subtitle.text=testing?"CONTROL WARM-UP / Move freely before you start.":"Point with your controller. Select with the trigger.";
-        instruction.text=Attack?"2 / LEARN ATTACK CONTROLS\n1. Hold the SIDE GRIP near the attacking handle.\n2. Push or pull to align a figure with the ball.\n3. Twist your wrist to move the foot through the ball.":"2 / LEARN GOALKEEPER CONTROLS\n1. Bring a controller to the highlighted handle.\n2. Hold its SIDE GRIP to grab the handle.\n3. Push or pull along the rod. Release grip to let go.";
+        instruction.text=Attack?"2 / LEARN ATTACK CONTROLS\n1. Hold GRIP or TRIGGER near the attacking handle.\n2. Push or pull to align a figure with the ball.\n3. Twist your wrist to move the foot through the ball.":"2 / LEARN GOALKEEPER CONTROLS\n1. Bring a controller to the highlighted handle.\n2. Hold GRIP or TRIGGER to grab the handle.\n3. Push or pull along the rod. Release to let go.";
         controlState.text=testing?control.TrackingStatus+(Attack?"\nA / X: next ball after a shot":"\nThe goalkeeper stays vertical."):"Try freely first. The menu moves aside so you can reach the handle.";
+        defenseToggle.gameObject.SetActive(session.exerciseSelection==0);
+        defenseToggle.GetComponentInChildren<Text>().text=session.exercise.twoRodDefense?"Defense / two handles":"Defense / keeper only";
+        if(session.exercise.UseDefenseLine)instruction.text="TWO-HANDLE DEFENSE\nHold grip or trigger on each controller to grab the goalkeeper and the two-player rod. Slide either bar into the path of the shot.";
         resetDemo.interactable=testing;
         settingsTitle.text="3 / "+names[session.exerciseSelection];
         Mark(difficultyButtons,session.difficulty);Mark(practiceButtons,System.Array.IndexOf(new[]{3,5,10},session.practiceTrials));Mark(measurementButtons,System.Array.IndexOf(new[]{10,20,30},session.measurementTrials));Mark(visibilityButtons,session.occlusionEnabled?1:0);
@@ -194,7 +199,7 @@ public class BabyFootVRMenu : MonoBehaviour
         feedback.text=names[session.exerciseSelection]+"\n"+stage.ToUpper()+" | "+session.CompletedTrials+" completed\n"+message;
         nextTrial.interactable=!active;recenter.interactable=!active||testing;
         summaryLabel.text="SESSION RESULTS\n"+session.SummaryText;
-        statusText.text=message+(control.IsHeld?"\nHANDLE HELD":"\nHold side grip near the handle")+(string.IsNullOrEmpty(session.Error)?"":"\n"+session.Error);
+        statusText.text=message+(control.IsHeld?"\nHANDLE HELD":"\nHold grip or trigger near the handle")+(string.IsNullOrEmpty(session.Error)?"":"\n"+session.Error);
         if(!string.IsNullOrEmpty(session.Error))subtitle.text=session.Error;
         PositionPanels();
         string layoutKey=stage+":"+page+":"+testing+":"+session.exerciseSelection;

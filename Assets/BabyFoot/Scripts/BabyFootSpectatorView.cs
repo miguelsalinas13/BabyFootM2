@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR;
+using UnityEngine.Rendering.Universal;
 using Unity.XR.CoreUtils;
 
 // A fixed monitor camera is used only without an active headset. Never moves the VR head.
@@ -27,6 +28,7 @@ public class BabyFootSpectatorView:MonoBehaviour
         {
             var go=new GameObject("Spectator Monitor Camera");go.transform.SetParent(transform,false);
             MonitorCamera=go.AddComponent<Camera>();MonitorCamera.CopyFrom(origin.Camera);
+            MonitorCamera.GetUniversalAdditionalCameraData().renderPostProcessing=origin.Camera.GetUniversalAdditionalCameraData().renderPostProcessing;
             MonitorCamera.stereoTargetEye=StereoTargetEyeMask.None;MonitorCamera.fieldOfView=65;MonitorCamera.depth=origin.Camera.depth+1;PositionCamera();
         }
         if(wanted!=drivingMonitor)
@@ -59,9 +61,9 @@ public class BabyFootSpectatorView:MonoBehaviour
             GUI.backgroundColor=oldBackground;return;
         }
         Color old=GUI.color;GUI.color=BabyFootUITheme.Dark;GUI.Box(new Rect(16,16,530,150),GUIContent.none,panel);GUI.color=old;
-        GUI.Label(new Rect(30,22,500,32),$"DEMO   /   BLUE AI  {match.BlueScore} : {match.CoralScore}  CORAL AI",title);
+        GUI.Label(new Rect(30,22,500,32),$"DEMO   /   BLUE AI  {match.BlueScore} : {match.CoralScore}  RED AI",title);
         GUI.Label(new Rect(30,62,500,30),"Blue: "+match.AI.BlueAction,label);
-        GUI.Label(new Rect(30,92,500,30),"Coral: "+match.AI.CoralAction,label);
+        GUI.Label(new Rect(30,92,500,30),"Red: "+match.AI.CoralAction,label);
         GUI.Label(new Rect(30,126,500,28),match.Paused?"Paused":match.Message,label);
         float y=Screen.height-64;
         if(GUI.Button(new Rect(18,y,125,44),match.Paused?"Resume":"Pause",button))ui.TogglePause();

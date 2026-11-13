@@ -19,6 +19,28 @@ public class BabyFootDefense : MonoBehaviour
     public ExerciseMode exerciseMode;
     public BabyFootTrajectory trajectory;
     public BabyFootAttack attack;
+    public bool twoRodDefense;
+    public Transform DefenseLine {get;private set;}
+    public bool UseDefenseLine=>twoRodDefense && exerciseMode==ExerciseMode.ReactionDefense && DefenseLine;
+    bool originalLineActive,lineOverride;
+    float lineStartX,lineOnsetX;
+    Quaternion lineRotation;
+    public void SetDefenseLine(bool enabled)
+    {
+        twoRodDefense=enabled;
+        if(!DefenseLine || exerciseMode!=ExerciseMode.ReactionDefense)return;
+        if(enabled && !lineOverride)
+        {
+            originalLineActive=DefenseLine.gameObject.activeSelf;lineRotation=DefenseLine.localRotation;
+            DefenseLine.gameObject.SetActive(true);DefenseLine.localRotation=Quaternion.identity;lineOverride=true;
+        }
+        else if(!enabled && lineOverride)RestoreDefenseLine();
+    }
+    void RestoreDefenseLine()
+    {
+        DefenseLine.gameObject.SetActive(originalLineActive);DefenseLine.localRotation=lineRotation;
+        lineOverride=false;
+    }
     public bool IsAttack => exerciseMode==ExerciseMode.FindTheGap;
     [HideInInspector] public bool nextWallBounce;
     [HideInInspector] public bool nextPlayerBounce;
@@ -46,10 +68,12 @@ public class BabyFootDefense : MonoBehaviour
     public void ConfigureExercise(ExerciseMode mode)
     {
         CancelTrial();
+        if(lineOverride)RestoreDefenseLine();
         if(attack) attack.Configure(false);
         exerciseMode=mode;
         if(trajectory) trajectory.Configure(mode==ExerciseMode.TrajectoryAnticipation);
         ResetPositions();
+        if(mode==ExerciseMode.ReactionDefense)SetDefenseLine(twoRodDefense);
         if(IsAttack) { EnsureAttack(); attack.Configure(true); }
     }
     public float barSpeed=.45f, lateralLimit=.09f, shotSpeed=.85f;
@@ -86,6 +110,10 @@ public class BabyFootDefense : MonoBehaviour
     void Awake()
     {
         EnsureAttack();
+        foreach(Transform candidate in goalkeeper.parent)
+            if(candidate.localPosition.z>goalkeeper.localPosition.z && candidate.Find("Player 2") &&
+                (!DefenseLine || candidate.localPosition.z<DefenseLine.localPosition.z))DefenseLine=candidate;
+        if(DefenseLine){originalLineActive=DefenseLine.gameObject.activeSelf;lineRotation=DefenseLine.localRotation;lineStartX=DefenseLine.localPosition.x;}
         var rb=ball.GetComponent<Rigidbody>(); if(rb) rb.isKinematic=true;
         ResetPositions();
     }
@@ -93,6 +121,7 @@ public class BabyFootDefense : MonoBehaviour
     {
         SetBallOccluded(false); OcclusionObserved=false; OcclusionOnsetSeconds=-1;
         TrialReset?.Invoke();
+        if(UseDefenseLine){var p=DefenseLine.localPosition;p.x=lineStartX;DefenseLine.localPosition=p;}
         goalkeeper.localPosition=new Vector3(0,.84f,-.5565f);
         if(IsLongShot) { ball.localPosition=trajectory.StartLocal; trajectory.ResetObservation(); }
         else if(shotSpawn) ball.position=shotSpawn.position;
@@ -140,7 +169,7 @@ public class BabyFootDefense : MonoBehaviour
         if(phase==Phase.Waiting && Time.realtimeSinceStartupAsDouble>=scheduled)
         {
             onset=Time.realtimeSinceStartupAsDouble; start=ball.localPosition;
-            KeeperXAtOnset=goalkeeper.localPosition.x;
+            KeeperXAtOnset=goalkeeper.localPosition.x;lineOnsetX=UseDefenseLine?DefenseLine.localPosition.x:0;
             velocity=(new Vector3(target,start.y,-.5565f)-start).normalized*shotSpeed;
             phase=Phase.Flying; message="Defend the goal";
             StimulusPresented=true;
@@ -150,12 +179,12 @@ public class BabyFootDefense : MonoBehaviour
         if(phase==Phase.Waiting || phase==Phase.Flying)
         {
             var p=goalkeeper.localPosition; p.x=Mathf.Clamp(externalControls?externalGoalkeeperX:p.x+input*barSpeed*Time.unscaledDeltaTime,-lateralLimit,lateralLimit); goalkeeper.localPosition=p;
-            if(phase==Phase.Waiting&&Mathf.Abs(p.x)>=.005f)
+            if(phase==Phase.Waiting&&(Mathf.Abs(p.x)>=.005f || UseDefenseLine&&Mathf.Abs(DefenseLine.localPosition.x-lineStartX)>=.005f))
             {
                 PreShotMovement=true;
                 if(penalizeEarlyMovement){Finish("false_start");return;}
             }
-            if(phase==Phase.Flying&&ReactionEligible&&Mathf.Abs(p.x-KeeperXAtOnset)>=.005f&&response<0)response=Time.realtimeSinceStartupAsDouble-onset;
+            if(phase==Phase.Flying&&ReactionEligible&&(Mathf.Abs(p.x-KeeperXAtOnset)>=.005f || UseDefenseLine&&Mathf.Abs(DefenseLine.localPosition.x-lineOnsetX)>=.005f)&&response<0)response=Time.realtimeSinceStartupAsDouble-onset;
         }
         if(phase!=Phase.Flying) return;
         // Deterministic trajectory and swept interval collision: avoids tunnelling at low FPS.
@@ -169,6 +198,18 @@ public class BabyFootDefense : MonoBehaviour
             { if(!OcclusionObserved) OcclusionOnsetSeconds=Time.realtimeSinceStartupAsDouble-onset; SetBallOccluded(true); OcclusionObserved=true; }
         }
         const float radius=.0175f, halfDepth=.0125f, halfWidth=.0115f;
+        if(UseDefenseLine && old.z>next.z)
+        {
+            float z=DefenseLine.localPosition.z;
+            if(old.z>=z-halfDepth-radius && next.z<=z+halfDepth+radius)
+            {
+                float t=Mathf.Clamp01((old.z-z)/(old.z-next.z));
+                Vector3 hit=Vector3.Lerp(old,next,t);
+                foreach(Transform figure in DefenseLine)
+                    if(figure.name.StartsWith("Player ") && Mathf.Abs(hit.x-DefenseLine.localPosition.x-figure.localPosition.x)<=radius+halfWidth)
+                    {ball.localPosition=hit;saves++;Finish("save");return;}
+            }
+        }
         float front=goalkeeper.localPosition.z+halfDepth+radius;
         float back=goalkeeper.localPosition.z-halfDepth-radius;
         if(old.z>=back && next.z<=front)

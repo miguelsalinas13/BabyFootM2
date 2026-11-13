@@ -39,6 +39,17 @@ public static class BabyFootRodTravel
         float handleDistance=Mathf.Max(.59f,.37f+.075f+.003f+(side>0?-range.x:range.y));
         foreach(Transform part in rod)if(part.name=="Handle Visual"||part.name=="Grip")
         {var p=part.localPosition;p.x=side*handleDistance;part.localPosition=p;}
+        var imported=rod.Find("Poignée");
+        if(imported)
+        {
+            foreach(var mesh in imported.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if(!mesh.enabled || mesh.name!="Handle")continue;
+                var center=mesh.transform.TransformPoint(mesh.GetComponent<MeshFilter>().sharedMesh.bounds.center);
+                imported.position+=rod.Find("Handle Visual").position-center;
+                break;
+            }
+        }
         // Preserve support through both cabinet bearings and cover the handle-side shaft.
         float shaftMin=Mathf.Min(-.66f,-.39f-range.y),shaftMax=Mathf.Max(.66f,.39f-range.x);
         if(side>0)shaftMax=Mathf.Max(shaftMax,handleDistance+.065f);else shaftMin=Mathf.Min(shaftMin,-handleDistance-.065f);

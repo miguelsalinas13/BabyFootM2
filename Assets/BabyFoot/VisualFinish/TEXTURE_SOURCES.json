@@ -1,0 +1,44 @@
+[
+  {
+    "asset": "fine_grained_wood",
+    "channel": "Diffuse",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/fine_grained_wood/fine_grained_wood_col_2k.jpg",
+    "file": "fine_grained_wood_Diffuse.jpg",
+    "md5": "cfbfbf2cc0e0633af9b959a0e6e17182"
+  },
+  {
+    "asset": "fine_grained_wood",
+    "channel": "nor_gl",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/fine_grained_wood/fine_grained_wood_nor_gl_2k.jpg",
+    "file": "fine_grained_wood_nor_gl.jpg",
+    "md5": "24423b733087ca4cefe5833d131a1f62"
+  },
+  {
+    "asset": "fine_grained_wood",
+    "channel": "Rough",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/fine_grained_wood/fine_grained_wood_rough_2k.jpg",
+    "file": "fine_grained_wood_Rough.jpg",
+    "md5": "1356433f66fe066762c1be121f76738d"
+  },
+  {
+    "asset": "concrete_floor_02",
+    "channel": "Diffuse",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_02/concrete_floor_02_diff_1k.jpg",
+    "file": "concrete_floor_02_Diffuse.jpg",
+    "md5": "1cfee53d2f82fa59726ab7ae6a2e8c09"
+  },
+  {
+    "asset": "concrete_floor_02",
+    "channel": "nor_gl",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_02/concrete_floor_02_nor_gl_1k.jpg",
+    "file": "concrete_floor_02_nor_gl.jpg",
+    "md5": "c2065fd81f571f4e39163ea5661128fb"
+  },
+  {
+    "asset": "concrete_floor_02",
+    "channel": "Rough",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_02/concrete_floor_02_rough_1k.jpg",
+    "file": "concrete_floor_02_Rough.jpg",
+    "md5": "653d60d0db1872a49138455cf31c8326"
+  }
+]

@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 
-// Arts et Metiers palette; original BabyFoot interface, not an institutional logotype.
+// Tournament interface colours.
 public static class BabyFootUITheme
 {
-    public static readonly Color Plum=Hex("80276C"),Orange=Hex("FFA300"),Ink=Hex("302035"),Cream=Hex("F5F0E8"),Muted=Hex("736475"),Line=Hex("D7C9D4"),Dark=Hex("281A30");
+    public static readonly Color Plum=Hex("123659"),Orange=Hex("9BD9EF"),Ink=Hex("122C41"),Cream=Hex("F1F4F4"),Muted=Hex("4F6778"),Line=Hex("B9CDD8"),Dark=Hex("102C46");
     static Font regular,semibold;static Sprite rounded;
     public static Color Hex(string value){ColorUtility.TryParseHtmlString("#"+value,out var c);return c;}
     public static Font Regular=>regular?regular:regular=Resources.Load<Font>("BabyFootUI/SourceSans3-Regular")??Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -58,7 +58,7 @@ public static class BabyFootUITheme
     {
         var go=new GameObject("BabyFoot identity",typeof(RectTransform));go.transform.SetParent(parent,false);go.AddComponent<LayoutElement>().preferredHeight=height;
         var rect=go.GetComponent<RectTransform>();Surface(go,Plum).raycastTarget=false;
-        FreeText(go.transform,"Campus","ARTS ET MÉTIERS  /  MTI3D",17,Hex("F1D6EA"),Vector2.zero,Vector2.one,new Vector2(22,height-32),new Vector2(-140,-7));
+        FreeText(go.transform,"Campus","TABLE FOOTBALL",17,Hex("C6DFE9"),Vector2.zero,Vector2.one,new Vector2(22,height-32),new Vector2(-140,-7));
         var wordmark=FreeText(go.transform,"BabyFoot wordmark","BABYFOOT",height>=120?58:46,Color.white,Vector2.zero,Vector2.one,new Vector2(20,22),new Vector2(-140,-24));wordmark.font=Semibold;
         FreeText(go.transform,"Section",section.ToUpperInvariant(),18,Orange,Vector2.zero,Vector2.one,new Vector2(23,4),new Vector2(-140,-(height-30)));
         var iconRect=Decoration(go.transform,"Angular court mark",Vector2.zero,Vector2.one,new Vector2(-124,25),new Vector2(-20,-25));iconRect.anchorMin=new Vector2(1,0);

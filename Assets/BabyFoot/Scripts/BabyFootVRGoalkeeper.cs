@@ -2,6 +2,24 @@ using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics;
 
+internal static class BabyFootRodInput
+{
+    public static bool IsPressed(InputDevice device, bool holding)
+    {
+        float threshold = holding ? .32f : .50f;
+        return Pressed(device, CommonUsages.grip, CommonUsages.gripButton, threshold)
+            || Pressed(device, CommonUsages.trigger, CommonUsages.triggerButton, threshold);
+    }
+
+    static bool Pressed(InputDevice device, InputFeatureUsage<float> axis,
+        InputFeatureUsage<bool> button, float threshold)
+    {
+        if (device.TryGetFeatureValue(axis, out float pressure))
+            return pressure > threshold;
+        return device.TryGetFeatureValue(button, out bool down) && down;
+    }
+}
+
 // Shared controller adapter: constrained slide, vertical keeper, wrist-driven attack.
 [DefaultExecutionOrder(-100)]
 public class BabyFootVRGoalkeeper : MonoBehaviour
@@ -14,9 +32,12 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
     public bool IsHeld=>owner;
     public bool IsNear {get;private set;}
     public string TrackingStatus {get;private set;}="Bring a controller to the handle";
-    public string Hint=>IsHeld?(exercise.IsAttack?"GRABBED | Slide, then swing through the ball":"GRABBED | Push or pull along the rod"):IsNear?"HOLD SIDE GRIP TO GRAB":"Bring a controller to this handle";
+    public string Hint=>IsHeld?(exercise.IsAttack?"GRABBED | Slide, then swing through the ball":"GRABBED | Push or pull along the rod"):IsNear?"HOLD GRIP OR TRIGGER":"Bring a controller to this handle";
     public Transform ControlledRod=>rod;
-    Transform owner,rod;
+    Transform owner,rod,defenseHand;
+    float defenseHandX,defenseRodX,followRemaining,followSpeed;
+    bool defenseRelease;
+    public bool HoldsDefense=>defenseHand!=null;
     XRNode ownerNode;
     bool mustRelease,previousActive,armed;
     float startHandX,startRodX,startRodAngle,previousAngle;
@@ -36,7 +57,6 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
         tint=new MaterialPropertyBlock();RefreshTarget();
     }
     static bool Tracked(InputDevice d)=>d.isValid&&d.TryGetFeatureValue(CommonUsages.isTracked,out bool value)&&value;
-    static bool Grip(InputDevice d)=>d.TryGetFeatureValue(CommonUsages.gripButton,out bool button)&&button || d.TryGetFeatureValue(CommonUsages.grip,out float amount)&&amount>.65f;
     public static float Slide(float handX,float anchorX,float rodX,float limit)=>Mathf.Clamp(rodX+handX-anchorX,-limit,limit);
     public static float Twist(Quaternion from,Quaternion to,Vector3 axis)
     {
@@ -52,7 +72,7 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
     }
     public void Release()
     {
-        owner=null;armed=false;mustRelease=true;
+        owner=defenseHand=null;defenseRelease=true;followRemaining=0;armed=false;mustRelease=true;
     }
     public void RefreshTarget()
     {
@@ -65,7 +85,7 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
     void Anchor()
     {
         startHandX=rod.parent.InverseTransformPoint(owner.position).x;startRodX=rod.localPosition.x;
-        startHandRotation=owner.rotation;startRodAngle=exercise.IsAttack?Mathf.DeltaAngle(0,rod.localEulerAngles.x):0;
+        startHandRotation=owner.rotation;startRodAngle=exercise.IsAttack?BabyFootFootContact.Angle(rod):0;
         previousAngle=startRodAngle;armed=false;
     }
     public void BeginHold(Transform hand,XRNode node)
@@ -80,7 +100,7 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
         if(!owner||!rod)return;
         bool active=exercise.IsTrialActive;
         if(active&&!previousActive)Anchor();
-        bool movable=FreeControl || active;
+        bool movable=FreeControl || active || followRemaining>0;
         if(movable)
         {
             var p=rod.localPosition;
@@ -88,10 +108,20 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
             rod.localPosition=p;
             if(exercise.IsAttack)
             {
-                float angle=Mathf.Clamp(startRodAngle+Twist(startHandRotation,owner.rotation,rod.parent.TransformDirection(Vector3.right)),-85,85);
+                float angle=previousAngle+Twist(startHandRotation,owner.rotation,rod.parent.TransformDirection(Vector3.right));
+                startHandRotation=owner.rotation;
+                if(followRemaining>0)
+                {
+                    float step=Mathf.Min(followRemaining,followSpeed*deltaTime);
+                    angle=previousAngle+step;followRemaining-=step;
+                }
                 float speed=(angle-previousAngle)/Mathf.Max(.001f,deltaTime);
                 rod.localRotation=Quaternion.AngleAxis(angle,Vector3.right);
-                if(exercise.attack.TryControllerStrike(previousAngle,angle,speed))Pulse(.5f);
+                if(exercise.attack.TryControllerStrike(previousAngle,angle,speed))
+                {
+                    Pulse(.5f);
+                    if(speed>=900){followRemaining=Mathf.Max(0,360-(angle-previousAngle));followSpeed=Mathf.Min(speed,1800);}
+                }
                 previousAngle=angle;
             }
         }
@@ -102,20 +132,43 @@ public class BabyFootVRGoalkeeper : MonoBehaviour
     {
         RefreshTarget();if(!rod||!handle)return;
         var left=InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);var right=InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-        bool lt=Tracked(left),rt=Tracked(right),lg=Grip(left),rg=Grip(right);
+        bool lt=Tracked(left),rt=Tracked(right),lg=BabyFootRodInput.IsPressed(left,owner==leftHand || defenseHand==leftHand),
+            rg=BabyFootRodInput.IsPressed(right,owner==rightHand || defenseHand==rightHand);
         if(!lg&&!rg)mustRelease=false;
+        if(exercise.UseDefenseLine)
+        {
+            var line=exercise.DefenseLine;
+            var grip=line.Find("Handle Visual");
+            if(defenseHand && !(defenseHand==leftHand?lt&&lg:rt&&rg))defenseHand=null;
+            if(!lg||!rg)defenseRelease=false;
+            if(!defenseHand && !defenseRelease)
+            {
+                float dl=lt&&lg&&owner!=leftHand?Vector3.Distance(leftHand.position,grip.position):float.PositiveInfinity;
+                float dr=rt&&rg&&owner!=rightHand?Vector3.Distance(rightHand.position,grip.position):float.PositiveInfinity;
+                var hand=dl<=dr?leftHand:rightHand;
+                if(Mathf.Min(dl,dr)<grabRadius && Mathf.Min(dl,dr)<Vector3.Distance(hand.position,handle.position))
+                {defenseHand=hand;defenseHandX=line.parent.InverseTransformPoint(hand.position).x;defenseRodX=line.localPosition.x;}
+            }
+            if(defenseHand && (FreeControl||exercise.IsTrialActive))
+            {
+                var pos=line.localPosition;
+                pos.x=Slide(line.parent.InverseTransformPoint(defenseHand.position).x,defenseHandX,defenseRodX,exercise.lateralLimit);
+                line.localPosition=pos;
+            }
+        }
+        else defenseHand=null;
         bool nearLeft=lt&&Vector3.Distance(leftHand.position,handle.position)<=grabRadius;
         bool nearRight=rt&&Vector3.Distance(rightHand.position,handle.position)<=grabRadius;
         IsNear=nearLeft||nearRight;
         if(owner)
         {
-            var device=ownerNode==XRNode.LeftHand?left:right;
-            if(!Tracked(device)||!Grip(device)||!handle.gameObject.activeInHierarchy)Release();
+            bool holding = ownerNode == XRNode.LeftHand ? lt && lg : rt && rg;
+            if(!holding||!handle.gameObject.activeInHierarchy){owner=null;followRemaining=0;mustRelease=false;}
         }
         if(!owner&&!mustRelease)
         {
-            if(nearLeft&&lg)BeginHold(leftHand,XRNode.LeftHand);
-            else if(nearRight&&rg)BeginHold(rightHand,XRNode.RightHand);
+            if(nearLeft&&lg&&defenseHand!=leftHand)BeginHold(leftHand,XRNode.LeftHand);
+            else if(nearRight&&rg&&defenseHand!=rightHand)BeginHold(rightHand,XRNode.RightHand);
         }
         if(owner)ApplyHeldPose(Time.unscaledDeltaTime);
         else {previousActive=exercise.IsTrialActive;exercise.externalGoalkeeperX=exercise.goalkeeper.localPosition.x;}

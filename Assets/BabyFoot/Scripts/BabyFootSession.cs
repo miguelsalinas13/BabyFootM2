@@ -44,6 +44,7 @@ public class BabyFootSession : MonoBehaviour
     Vector2 panelScroll;
     [Serializable] public class SessionMetadata
     {
+        public bool manualDefenseLine;
         public string protocol="BabyFoot prototype v9", sessionId,participantCode,startUtc,endUtc,status,difficulty,exerciseMode;
         public string inputMode="desktop_keyboard";
         public string earlyMovementPolicy="allowed; timing excluded when movement >=5mm is observed before launch";
@@ -131,6 +132,7 @@ public class BabyFootSession : MonoBehaviour
         metadata.earlyMovementPolicy=exercise.penalizeEarlyMovement?"strict false-start penalty":"allowed; continue trial, exclude pre-movement trials from response-time statistics";
         if(!exercise.IsAttack)metadata.responseDefinition="Shot onset to >=5mm displacement from keeper position at launch; exclude trials with pre-launch movement >=5mm. Software timing; input/hardware latency uncalibrated.";
         metadata.occlusionEnabled=exercise.occludeFinalSegment;
+        metadata.manualDefenseLine=exercise.UseDefenseLine;
         metadata.exerciseMode=exerciseNames[exerciseSelection];
         if(exercise.IsLongShot) metadata.shotSpawnLocal=exercise.trajectory.StartLocal;
         try
